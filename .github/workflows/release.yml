@@ -55,6 +55,8 @@ jobs:
             mkdir -p "${BUNDLE_DIR}/performance_tools"
             cp performance_tools/grafana_dashboard.json "${BUNDLE_DIR}/performance_tools/grafana_dashboard.json"
             cp -r conf "${BUNDLE_DIR}/conf"
+            mkdir -p "${BUNDLE_DIR}/tests/integration/env_init/config/hdfs"
+            cp tests/integration/env_init/config/hdfs/hadoop.env "${BUNDLE_DIR}/tests/integration/env_init/config/hdfs/hadoop.env"
 
         - name: Pin jasminegraph image tag in bundled compose file
           run: |
