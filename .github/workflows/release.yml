@@ -13,12 +13,14 @@ jobs:
       runs-on: ubuntu-latest
       permissions:
         contents: write
+        pull-requests: read
 
       steps:
         - uses: actions/checkout@v4
           with:
             ref: ${{github.ref}}
             repository: ${{ github.repository }}
+            fetch-depth: 0
 
         - name: Docker Build
           run: |
@@ -122,9 +124,16 @@ jobs:
             BUNDLE_DIR="jasminegraph-${{ github.ref_name }}-compose-bundle"
             zip -r "${BUNDLE_DIR}.zip" "${BUNDLE_DIR}"
 
+        - name: Generate release notes
+          env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            chmod +x .github/workflows/scripts/generate-release-notes.sh
+            .github/workflows/scripts/generate-release-notes.sh
+
         - name: Create GitHub Release
           uses: softprops/action-gh-release@v2
           with:
             tag_name: ${{ github.ref_name }}
             files: jasminegraph-${{ github.ref_name }}-compose-bundle.zip
-            generate_release_notes: true
+            body_path: RELEASE_NOTES.md
