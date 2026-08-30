@@ -13,7 +13,7 @@ PREV_TAG=$(git tag --sort=-creatordate | grep -Fxv "${CURRENT_TAG}" | head -n1 |
 DEFAULT_BRANCH=$(gh repo view "${REPO}" --json defaultBranchRef -q .defaultBranchRef.name)
 
 UNTIL=$(TZ=UTC git log -1 --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format=%cd "${CURRENT_TAG}")
-if [ -n "${PREV_TAG}" ]; then
+if [[ -n "${PREV_TAG}" ]]; then
     SINCE=$(TZ=UTC git log -1 --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format=%cd "${PREV_TAG}")
 else
     SINCE="1970-01-01T00:00:00Z"
@@ -27,15 +27,16 @@ FILTERED=$(echo "${PRS_JSON}" | jq --arg since "${SINCE}" --arg until "${UNTIL}"
 
 print_pr() {
     # $1 = single PR object (compact JSON)
-    local num title author url body
-    num=$(echo "$1" | jq -r '.number')
-    title=$(echo "$1" | jq -r '.title')
-    author=$(echo "$1" | jq -r '.author.login')
-    url=$(echo "$1" | jq -r '.url')
-    body=$(echo "$1" | jq -r '.body // ""' | tr -d '\r')
+    local pr_json num title author url body
+    pr_json="$1"
+    num=$(echo "${pr_json}" | jq -r '.number')
+    title=$(echo "${pr_json}" | jq -r '.title')
+    author=$(echo "${pr_json}" | jq -r '.author.login')
+    url=$(echo "${pr_json}" | jq -r '.url')
+    body=$(echo "${pr_json}" | jq -r '.body // ""' | tr -d '\r')
 
     echo "- **${title}** ([#${num}](${url})) by @${author}"
-    if [ -n "$(echo "${body}" | tr -d '[:space:]')" ]; then
+    if [[ -n "$(echo "${body}" | tr -d '[:space:]')" ]]; then
         echo "${body}" | head -c 500 | sed 's/^/  > /'
         echo
     fi
@@ -60,7 +61,7 @@ print_pr() {
         SECTION_PRS=$(echo "${FILTERED}" | jq --arg label "${label}" \
             '[.[] | select([.labels[].name] | index($label))]')
         COUNT=$(echo "${SECTION_PRS}" | jq 'length')
-        if [ "${COUNT}" -gt 0 ]; then
+        if [[ "${COUNT}" -gt 0 ]]; then
             echo "### ${SECTION_TITLES[$label]}"
             echo
             while IFS= read -r pr; do
@@ -74,7 +75,7 @@ print_pr() {
     OTHER_PRS=$(echo "${FILTERED}" | jq --argjson used "${CATEGORIZED_NUMBERS}" \
         '[.[] | select(.number as $n | ($used | index($n)) | not)]')
     OTHER_COUNT=$(echo "${OTHER_PRS}" | jq 'length')
-    if [ "${OTHER_COUNT}" -gt 0 ]; then
+    if [[ "${OTHER_COUNT}" -gt 0 ]]; then
         echo "### 🔧 Other Changes"
         echo
         while IFS= read -r pr; do
@@ -83,13 +84,13 @@ print_pr() {
     fi
 
     TOTAL=$(echo "${FILTERED}" | jq 'length')
-    if [ "${TOTAL}" -eq 0 ]; then
+    if [[ "${TOTAL}" -eq 0 ]]; then
         echo "_No merged pull requests found for this release._"
         echo
     fi
 
     echo "---"
-    if [ -n "${PREV_TAG}" ]; then
+    if [[ -n "${PREV_TAG}" ]]; then
         echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV_TAG}...${CURRENT_TAG}"
     else
         echo "**Full Changelog**: https://github.com/${REPO}/commits/${CURRENT_TAG}"
