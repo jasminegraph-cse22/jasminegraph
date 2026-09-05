@@ -104,6 +104,12 @@ jobs:
           ref: ${{github.head_ref}}
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
 
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost \
+            /usr/local/lib/android /opt/hostedtoolcache "$AGENT_TOOLSDIRECTORY"
+          df -h
+
       - uses: jupyterhub/action-k3s-helm@v4
         with:
           docker-enabled: true
