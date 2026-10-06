@@ -9,11 +9,13 @@
 # (checkout must use fetch-depth: 0).
 set -euo pipefail
 
-CURRENT_TAG="${GITHUB_REF_NAME}"
+CURRENT_TAG="${TAG:-${GITHUB_REF_NAME}}"
 REPO="${GITHUB_REPOSITORY}"
 PR_BASE_BRANCH="develop"
 
-PREV_TAG=$(git tag --sort=-creatordate | grep -Fxv "${CURRENT_TAG}" | head -n1 || true)
+# Previous tag = the tag created just before CURRENT_TAG (so re-releasing an
+# older tag still gets the correct range, not the newest tag in the repo).
+PREV_TAG=$(git tag --sort=-creatordate | awk -v cur="${CURRENT_TAG}" 'found {print; exit} $0 == cur {found=1}' || true)
 
 UNTIL=$(TZ=UTC git log -1 --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format=%cd "${CURRENT_TAG}")
 if [[ -n ${PREV_TAG} ]]; then
