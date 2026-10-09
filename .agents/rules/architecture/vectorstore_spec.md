@@ -16,7 +16,7 @@ The `TextEmbedder` class acts as the bridge to external LLM or embedding models.
 
 ### 2.2 Vector Storage and Search (`FaissIndex.h`)
 JasmineGraph leverages Facebook AI Similarity Search (FAISS) for its underlying vector storage.
-* **Mechanism**: `FaissIndex` is a thread-safe Singleton wrapper around `faiss::IndexFlatL2` (which performs exact L2 distance search).
+* **Mechanism**: `FaissIndex` is a thread-safe wrapper around `faiss::IndexFlatL2` (which performs exact L2 distance search), instantiated per index file.
 * **ID Mapping**: FAISS natively only supports 64-bit integer IDs (`idx_t`). Because JasmineGraph uses string-based `nodeId`s, `FaissIndex` maintains bidirectional hash maps (`nodeIdToEmbeddingIdMap` and `embeddingIdToNodeIdMap`) to transparently map between string IDs and FAISS internal IDs.
 
 ## 3. Key Operations

@@ -14,9 +14,6 @@ The system is designed around highly optimized, memory-efficient data structures
 ### 2.1 Edge Lifespan Tracking (`EdgeLifespanBitmap.h`)
 Instead of storing multiple copies of the graph for each snapshot, the store uses **Roaring Bitmaps** (`CRoaring` library) to track edge existence.
 * **Mechanism**: Every unique edge (Source $\rightarrow$ Destination) has a dedicated `EdgeLifespanBitmap`. Each bit index in the bitmap corresponds to a `snapshotId`. If bit `N` is set to `1`, the edge existed in snapshot `N`.
-* **Optimizations**: 
-  * Roaring Bitmaps automatically compress sparse data, yielding 10-100x space savings.
-  * Hardware-accelerated SIMD instructions are used for bitwise operations (e.g., intersection, union).
 
 ### 2.2 Property Tracking (`PropertyIntervalDictionary.h`)
 While edge existence is tracked via bitmaps, the properties of nodes and edges are tracked using a `PropertyIntervalDictionary`. This dictionary allows the store to add or update properties at specific snapshot intervals and query the exact property value at any historical `snapshotId`.
@@ -33,14 +30,18 @@ When a new edge is added:
 3. It sets the bit corresponding to the `currentSnapshotId` to `true`.
 4. It notifies the `SnapshotManager` to record the edge, which may trigger a snapshot rotation if thresholds are met.
 
-### 3.2 Temporal Querying (`edgeExistsAtSnapshot`)
-To check if an edge existed at `snapshotId = 42`, the system simply retrieves the bitmap for the edge and performs an O(1) bit-check (`getBit(42)`).
+### 3.2 Temporal Querying (`TemporalQueryExecutor.h`, `TemporalStore.h`)
+Temporal querying supports point-in-time verification, time-window aggregations, and edge evolution tracking:
+* **Edge Existence Check (`edgeExistsAtSnapshot`)**: Determines whether an edge existed at a specific snapshot by checking the corresponding bit index in the edge's `EdgeLifespanBitmap`.
+* **Snapshot Edge Retrieval (`getEdgesAtSnapshot`)**: Scans registered edge bitmaps to return all active directed edges for a target snapshot ID.
+* **Property Inspection (`getNodePropertyAtSnapshot`, `getEdgePropertyAtSnapshot`)**: Queries historical node and edge attributes valid at a given snapshot via interval dictionary lookups.
+* **Time Range & Evolution Tracking (`trackEdgeEvolution`, `getEdgesInTimeRange`)**: Reconstructs state transitions and extracts topological deltas across consecutive snapshot windows.
 
-### 3.3 Triangle Counting (`countTrianglesAtSnapshot`)
-A highly optimized algorithm is implemented for counting triangles at a specific snapshot, leveraging SIMD operations:
+### 3.3 Streaming Triangle Counting (`countTrianglesAtSnapshot`)
+An optimized algorithm is implemented for streaming triangle counting over temporal snapshots:
 1. **Index Mapping**: It maps string node IDs to contiguous `uint32_t` indices for the active edges in the requested snapshot.
 2. **Adjacency Bitmaps**: It builds an undirected adjacency list where each node's neighbors are stored in a Roaring Bitmap.
-3. **SIMD Intersection**: For each edge `(u, v)`, it computes the intersection of `neighbors(u)` and `neighbors(v)` using `roaring_bitmap_and` (which utilizes AVX2 instructions). The cardinality of this intersection equals the number of common neighbors (i.e., triangles containing `(u, v)`).
+3. **Bitmap Intersection**: For each edge `(u, v)`, it computes the intersection of `neighbors(u)` and `neighbors(v)` using bitmap bitwise AND (`roaring_bitmap_and`). The cardinality of this intersection equals the number of common neighbors (i.e., triangles containing `(u, v)`).
 
 ## 4. Persistence Mechanism
 To prevent memory exhaustion, the `TemporalStore` implements a windowed persistence model:
